@@ -227,3 +227,166 @@ Please provide a helpful, accurate response based on the context above. Include 
 
 RESPONSE:`;
     }
+    
+    async mockBedrockClaude(prompt, state) {
+        // TODO: Replace with actual Bedrock Claude call
+        // const command = new InvokeModelCommand({
+        //     modelId: "anthropic.claude-3-haiku-20240307-v1:0",
+        //     contentType: "application/json",
+        //     accept: "application/json",
+        //     body: JSON.stringify({
+        //         anthropic_version: "bedrock-2023-05-31",
+        //         max_tokens: 500,
+        //         messages: [{
+        //             role: "user",
+        //             content: prompt
+        //         }]
+        //     })
+        // });
+        // 
+        // const response = await bedrockClient.send(command);
+        // const responseBody = JSON.parse(new TextDecoder().decode(response.body));
+        // return responseBody.content[0].text;
+        
+        // Mock response with source attribution
+        if (state.retrievedContext.length > 0) {
+            const sources = state.retrievedContext.map(item => item.metadata.title).join(", ");
+            return `Based on the available documentation, here's what I can tell you about your question:
+
+${this.generateMockAnswer(state.currentQuery)}
+
+This information is sourced from: ${sources}
+
+Would you like me to elaborate on any specific aspect?`;
+        } else {
+            return "I don't have specific information about that topic in my current knowledge base. Could you try rephrasing your question or asking about a different aspect?";
+        }
+    }
+    
+    generateMockAnswer(query) {
+        // Simple mock responses based on query content
+        const lowerQuery = query.toLowerCase();
+        
+        if (lowerQuery.includes('machine learning') || lowerQuery.includes('ml')) {
+            return "Machine learning is a powerful subset of AI that allows systems to learn from data without being explicitly programmed. It's widely used in applications ranging from recommendation systems to autonomous vehicles.";
+        } else if (lowerQuery.includes('javascript') || lowerQuery.includes('js')) {
+            return "JavaScript has evolved significantly and now supports data science tasks through libraries like TensorFlow.js, D3.js for visualization, and various statistical computing packages.";
+        } else if (lowerQuery.includes('aws') || lowerQuery.includes('bedrock')) {
+            return "AWS Bedrock provides managed access to foundation models from companies like Anthropic, AI21, and Amazon, making it easier to integrate AI capabilities into applications without managing infrastructure.";
+        } else {
+            return "This appears to be a technology-related question. The available documentation contains information about various tech topics, tools, and best practices.";
+        }
+    }
+    
+    async updateMemory(state) {
+        console.log("💾 Updating conversation memory...");
+        
+        // TODO: Implement conversation memory management
+        // Hints:
+        // 1. Store query and response in conversation history
+        // 2. Implement memory limits (max turns, token limits)
+        // 3. Track conversation context for future queries
+        // 4. Update agent metadata
+        
+        try {
+            // Add to conversation history
+            const conversationTurn = {
+                timestamp: new Date().toISOString(),
+                query: state.currentQuery,
+                response: state.response,
+                contextUsed: state.retrievedContext.length,
+                sources: state.retrievedContext.map(item => item.metadata.title)
+            };
+            
+            // TODO: Implement proper memory management
+            if (!this.conversationHistory.has(state.conversationId)) {
+                this.conversationHistory.set(state.conversationId, []);
+            }
+            
+            const history = this.conversationHistory.get(state.conversationId);
+            history.push(conversationTurn);
+            
+            // Keep last 10 turns (memory limit)
+            if (history.length > 10) {
+                history.shift();
+            }
+            
+            console.log(`✅ Memory updated (${history.length} turns stored)`);
+            
+        } catch (error) {
+            console.error("❌ Memory update failed:", error.message);
+        }
+        
+        return state;
+    }
+    
+    async chat(query, conversationId = null) {
+        const state = new AgentState();
+        state.currentQuery = query;
+        state.conversationId = conversationId || uuidv4();
+        
+        console.log(`\n💬 New chat request: "${query}"`);
+        
+        const finalState = await this.graph.invoke(state);
+        
+        return {
+            response: finalState.response,
+            conversationId: finalState.conversationId,
+            metadata: finalState.metadata,
+            sources: finalState.retrievedContext.map(item => ({
+                title: item.metadata.title,
+                url: item.metadata.url,
+                similarity: item.similarity
+            }))
+        };
+    }
+    
+    getConversationHistory(conversationId) {
+        return this.conversationHistory.get(conversationId) || [];
+    }
+}
+
+// Main execution for testing
+async function main() {
+    console.log('='.repeat(50));
+    console.log('   EXERCISE 3: APP DEVELOPMENT - CHAT AGENT');
+    console.log('='.repeat(50));
+    console.log('Role: Application Developer');
+    console.log('Task: Build RAG chat agent with LangGraph\n');
+    
+    try {
+        // TODO: Uncomment when you've completed the TODO items above
+        // const agent = new RAGChatAgent();
+        // 
+        // // Test the agent
+        // const testQuery = "What is machine learning?";
+        // const result = await agent.chat(testQuery);
+        // 
+        // console.log(`\nQ: ${testQuery}`);
+        // console.log(`A: ${result.response}`);
+        // console.log(`Sources: ${result.sources.map(s => s.title).join(', ')}`);
+        
+        // For now, show the scaffolding structure
+        console.log('📋 TODO LIST:');
+        console.log('1. ✅ Review LangGraph agent architecture');
+        console.log('2. ❌ Complete searchVectorDatabase() function');
+        console.log('3. ❌ Complete generateResponse() with Bedrock');
+        console.log('4. ❌ Complete updateMemory() for conversations');
+        console.log('5. ❌ Test chat functionality');
+        console.log('\n💡 Tip: Make sure ChromaDB is running and Exercise 2 completed');
+        console.log('💡 Test individual methods before the full agent');
+        
+    } catch (error) {
+        console.error('❌ Agent initialization failed:', error.message);
+        console.log('\n🔧 Troubleshooting:');
+        console.log('1. Run Exercise 2 first to create vector database');
+        console.log('2. Start ChromaDB: docker run -p 8000:8000 chromadb/chroma');
+        console.log('3. Configure AWS credentials');
+    }
+}
+
+if (require.main === module) {
+    main().catch(console.error);
+}
+
+module.exports = { RAGChatAgent, AgentState };
