@@ -32,6 +32,7 @@ graph TB
             DW[Data Warehouses<br/>Snowflake<br/>BigQuery]
             DL[Data Lakes<br/>S3<br/>Azure Data Lake]
             DB[Databases<br/>PostgreSQL<br/>MongoDB<br/>Redis]
+            VDB[Vector Databases<br/>Pinecone<br/>Weaviate<br/>ChromaDB<br/>Qdrant<br/>Milvus]
         end
         
         subgraph "Orchestration"
@@ -52,6 +53,7 @@ graph TB
             FE[Feature Engineering]
             Model[Model Development<br/>& Training]
             Eval[Model Evaluation<br/>& Optimization]
+            Embeddings[Embedding Generation<br/>Text/Image/Audio<br/>to Vectors]
         end
         
         subgraph "ML Tools & Platforms"
@@ -79,6 +81,7 @@ graph TB
             API[Model APIs<br/>REST/GraphQL]
             Microservices[Microservices<br/>Architecture]
             Gateway[API Gateway]
+            RAG[RAG Systems<br/>Semantic Search<br/>Similarity Search]
         end
         
         subgraph "Deployment & Infrastructure"
@@ -121,6 +124,7 @@ graph TB
     Quality --> DW
     Quality --> DL
     Quality --> DB
+    Quality --> VDB
     
     DW --> EDA
     DL --> EDA
@@ -129,10 +133,15 @@ graph TB
     EDA --> FE
     FE --> Model
     Model --> Eval
+    Model --> Embeddings
+    Embeddings --> VDB
     Eval --> MLFlow
     
     MLFlow --> API
     Model --> API
+    VDB --> RAG
+    API --> RAG
+    RAG --> Microservices
     API --> Microservices
     Microservices --> Gateway
     
@@ -160,9 +169,9 @@ graph TB
     classDef endUser fill:#fce4ec
     
     class DS1,DS2,DS3,DS4,DS5 dataSource
-    class DE_Lang,DE_Tools,ETL,Stream,Quality,DW,DL,DB,Airflow_Orch,Databricks_DE dataEngineer
-    class DS_Lang,DS_Libs,EDA,FE,Model,Eval,Jupyter,MLFlow,Databricks_DS,Experiments,Viz,BI,Reports dataScientist
-    class AD_Lang,AD_Frame,API,Microservices,Gateway,Container,Orchestrate,Cloud,CDN,WebApp,Mobile,Embedded,RealTime,Monitor,Logs,Security appDeveloper
+    class DE_Lang,DE_Tools,ETL,Stream,Quality,DW,DL,DB,VDB,Airflow_Orch,Databricks_DE dataEngineer
+    class DS_Lang,DS_Libs,EDA,FE,Model,Eval,Embeddings,Jupyter,MLFlow,Databricks_DS,Experiments,Viz,BI,Reports dataScientist
+    class AD_Lang,AD_Frame,API,Microservices,Gateway,RAG,Container,Orchestrate,Cloud,CDN,WebApp,Mobile,Embedded,RealTime,Monitor,Logs,Security appDeveloper
     class Business,Consumers,Internal endUser
 ```
 
