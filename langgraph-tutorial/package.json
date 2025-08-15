@@ -1,0 +1,28 @@
+{
+  "name": "langgraph-tutorial",
+  "version": "1.0.0",
+  "description": "Team-based LangGraph tutorial with Data Science, Data Engineering, and App Development exercises",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "ex1": "cd exercise-1-data-science && node starter-code.js",
+    "ex2": "cd exercise-2-data-engineering && node embeddings-pipeline.js", 
+    "ex3": "cd exercise-3-app-development && node server.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.400.0",
+    "@langchain/langgraph": "^0.0.19",
+    "@langchain/community": "^0.2.0",
+    "@langchain/core": "^0.2.0",
+    "chromadb": "^1.8.0",
+    "express": "^4.18.2",
+    "axios": "^1.6.0",
+    "cheerio": "^1.0.0-rc.12",
+    "uuid": "^9.0.0",
+    "simple-statistics": "^7.8.3",
+    "dotenv": "^16.3.1"
+  },
+  "keywords": ["langgraph", "aws-bedrock", "tutorial", "ai", "ml", "data-science"],
+  "author": "Your Name",
+  "license": "MIT"
+}
