@@ -125,11 +125,6 @@ class RAGChatAgent {
         
         try {
             // TODO: Query ChromaDB for similar content
-            // const results = await this.collection.query({
-            //     queryTexts: [state.processedQuery],
-            //     nResults: 5,
-            //     include: ["documents", "metadatas", "distances"]
-            // });
             
             // For now, create mock search results (replace with actual ChromaDB query)
             const mockResults = {
@@ -194,7 +189,6 @@ class RAGChatAgent {
             const prompt = this.buildRAGPrompt(state.currentQuery, contextText, state.conversationId);
             
             // TODO: Call AWS Bedrock Claude
-            // const response = await this.callBedrockClaude(prompt);
             
             // For now, create mock response (replace with actual Bedrock call)
             const response = await this.mockBedrockClaude(prompt, state);
@@ -230,23 +224,6 @@ RESPONSE:`;
     
     async mockBedrockClaude(prompt, state) {
         // TODO: Replace with actual Bedrock Claude call
-        // const command = new InvokeModelCommand({
-        //     modelId: "anthropic.claude-3-haiku-20240307-v1:0",
-        //     contentType: "application/json",
-        //     accept: "application/json",
-        //     body: JSON.stringify({
-        //         anthropic_version: "bedrock-2023-05-31",
-        //         max_tokens: 500,
-        //         messages: [{
-        //             role: "user",
-        //             content: prompt
-        //         }]
-        //     })
-        // });
-        // 
-        // const response = await bedrockClient.send(command);
-        // const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-        // return responseBody.content[0].text;
         
         // Mock response with source attribution
         if (state.retrievedContext.length > 0) {

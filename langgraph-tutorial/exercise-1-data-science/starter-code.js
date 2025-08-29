@@ -5,9 +5,11 @@ const fs = require('fs');
 
 // Sample URLs for testing (feel free to add more)
 const SAMPLE_URLS = [
+    // bad link below
     'https://blog.openai.com/gpt-4',
     'https://aws.amazon.com/blogs/machine-learning/',
     'https://developers.googleblog.com/2023/05/introducing-palm-2.html',
+    // bad link above
     // Add more URLs as needed
 ];
 
@@ -78,18 +80,10 @@ class WebContentAnalyzer {
             console.log(`Fetching content from: ${url}`);
             
             // TODO: Add axios.get() call with proper headers
-            // const response = await axios.get(url, {
-            //     headers: { 'User-Agent': 'Mozilla/5.0 tutorial-bot' },
-            //     timeout: 10000
-            // });
             
             // TODO: Parse HTML with cheerio
-            // const $ = cheerio.load(response.data);
             
             // TODO: Extract text content (remove scripts, styles)
-            // $('script, style, nav, footer').remove();
-            // const title = $('h1').first().text().trim();
-            // const content = $('p, h2, h3').text();
             
             // TODO: Return structured data
             return {
@@ -124,16 +118,9 @@ class WebContentAnalyzer {
             
         // TODO: Calculate word frequency (like pandas value_counts())
         const wordFreq = {};
-        // words.forEach(word => {
-        //     wordFreq[word] = (wordFreq[word] || 0) + 1;
-        // });
         
         // TODO: Find top keywords
-        // const topWords = Object.entries(wordFreq)
-        //     .sort(([,a], [,b]) => b - a)
-        //     .slice(0, 10)
-        //     .map(([word]) => word);
-        
+
         // TODO: Calculate readability metrics
         const sentences = contentData.content.split(/[.!?]+/).length;
         const avgWordsPerSentence = contentData.wordCount / Math.max(sentences, 1);
@@ -190,12 +177,8 @@ class WebContentAnalyzer {
         const df = DataAnalysisTools.createDataFrame(this.results);
         
         // TODO: Calculate statistics (like pandas.describe())
-        // const wordCountStats = df.describe('wordCount');
-        // const qualityStats = df.describe('qualityScore');
         
         // TODO: Find patterns and trends
-        // const topTopics = this.extractTopTopics();
-        // const contentRecommendations = this.generateRecommendations();
         
         this.insights = {
             totalArticles: this.results.length,

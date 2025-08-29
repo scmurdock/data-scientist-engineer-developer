@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 
 // Initialize AWS Bedrock client
 const bedrockClient = new BedrockRuntimeClient({ 
+    region: process.env.BEDROCK_AWS_REGION || "us-east-1",
     region: process.env.AWS_REGION || "us-east-1" 
 });
 
@@ -173,7 +174,6 @@ class EmbeddingsPipeline {
                 console.log(`Embedding chunk: ${chunk.id.substring(0, 8)}...`);
                 
                 // TODO: Call Bedrock Titan embeddings
-                // const embedding = await this.callBedrockEmbeddings(chunk.content);
                 
                 // For now, create mock embeddings (replace with actual Bedrock call)
                 const embedding = await this.mockBedrockEmbeddings(chunk.content);
@@ -206,18 +206,6 @@ class EmbeddingsPipeline {
     
     async mockBedrockEmbeddings(text) {
         // TODO: Replace with actual Bedrock call
-        // const command = new InvokeModelCommand({
-        //     modelId: "amazon.titan-embed-text-v1",
-        //     contentType: "application/json",
-        //     accept: "application/json",
-        //     body: JSON.stringify({
-        //         inputText: text
-        //     })
-        // });
-        // 
-        // const response = await bedrockClient.send(command);
-        // const responseBody = JSON.parse(new TextDecoder().decode(response.body));
-        // return responseBody.embedding;
         
         // Mock 1536-dimensional embedding (Titan default)
         return Array.from({ length: 1536 }, () => Math.random() - 0.5);
@@ -240,7 +228,6 @@ class EmbeddingsPipeline {
         
         try {
             // TODO: Initialize ChromaDB collection
-            // const collection = await this.initializeCollection();
             
             // For now, simulate successful storage
             console.log(`Creating collection: ${this.collectionName}`);
@@ -251,12 +238,7 @@ class EmbeddingsPipeline {
                 const batch = state.embeddings.slice(i, i + batchSize);
                 
                 // TODO: Implement actual ChromaDB insertion
-                // await collection.add({
-                //     ids: batch.map(item => item.id),
-                //     embeddings: batch.map(item => item.vector),
-                //     documents: batch.map(item => item.content),
-                //     metadatas: batch.map(item => item.metadata)
-                // });
+
                 
                 console.log(`Stored batch ${Math.floor(i/batchSize) + 1}: ${batch.length} vectors`);
                 state.storedVectors.push(...batch);
