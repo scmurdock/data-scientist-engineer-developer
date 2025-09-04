@@ -3,6 +3,9 @@ const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-be
 const { ChromaApi, OpenAIEmbeddingFunction, Configuration } = require("chromadb");
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
+dotenv = require('dotenv');
+dotenv.config();
+
 
 // Initialize AWS Bedrock client
 const bedrockClient = new BedrockRuntimeClient({ 
