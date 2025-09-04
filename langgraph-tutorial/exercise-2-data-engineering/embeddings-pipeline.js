@@ -4,6 +4,9 @@ const { ChromaClient } = require("chromadb");
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
+dotenv = require('dotenv');
+dotenv.config();
+
 // Initialize AWS Bedrock client
 const bedrockClient = new BedrockRuntimeClient({ 
     region: process.env.AWS_REGION || process.env.BEDROCK_AWS_REGION || "us-east-1"
@@ -249,7 +252,7 @@ class EmbeddingsPipeline {
     async callBedrockEmbeddings(text) {
         try {
             const params = {
-                modelId: "amazon.titan-embed-text-v1",
+                modelId: process.env.BEDROCK_EMBEDDINGS_MODEL_ID,
                 contentType: "application/json",
                 accept: "application/json",
                 body: JSON.stringify({
