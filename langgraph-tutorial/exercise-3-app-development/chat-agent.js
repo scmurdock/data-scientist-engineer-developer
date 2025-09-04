@@ -1,6 +1,6 @@
 const { StateGraph, END, START } = require("@langchain/langgraph");
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
-const { ChromaApi, Configuration } = require("chromadb");
+const { ChromaClient, Configuration } = require("chromadb");
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
@@ -8,10 +8,6 @@ const { v4: uuidv4 } = require('uuid');
 const bedrockClient = new BedrockRuntimeClient({ 
     region: process.env.AWS_REGION || "us-east-1" 
 });
-
-const chroma = new ChromaApi(new Configuration({
-    basePath: "http://localhost:8000"
-}));
 
 // Agent state for conversation management
 class AgentState {
@@ -33,49 +29,67 @@ class RAGChatAgent {
     constructor() {
         this.collectionName = "tech-content-vectors";
         this.collection = null;
+        this.chromaClient = null;
+        this.useChromaClient = false;
         this.graph = null;
         this.conversationHistory = new Map();
+    // In-memory cache for local vector fallback
+    this.localVectorIndex = null; // { vectors: [{id, vector: number[], content, metadata}], dim }
+    this.embeddingCache = new Map(); // query -> embedding array
         this.initializeAgent();
     }
     
     async initializeAgent() {
-        // Check if vector database is ready
+        // Try to connect to ChromaDB using ChromaClient (embedded mode)
+        try {
+            this.chromaClient = new ChromaClient({ path: "./chroma_db" });
+            await this.chromaClient.listCollections();
+            this.useChromaClient = true;
+            console.log("✅ Connected to ChromaDB using ChromaClient (embedded mode)");
+        } catch (err) {
+            this.useChromaClient = false;
+            console.warn("⚠️  Could not connect to ChromaDB with ChromaClient, will use local file storage fallback.");
+        }
+
+        // Check if vector database is ready (file-based fallback or ChromaClient)
         await this.verifyVectorDatabase();
-        
+
         // Create LangGraph agent workflow
         const workflow = new StateGraph(AgentState);
-        
+
         // Define agent nodes
         workflow.addNode("processQuery", this.processQuery.bind(this));
         workflow.addNode("searchVectorDatabase", this.searchVectorDatabase.bind(this));
         workflow.addNode("generateResponse", this.generateResponse.bind(this));
         workflow.addNode("updateMemory", this.updateMemory.bind(this));
-        
+
         // Define agent flow
         workflow.addEdge(START, "processQuery");
         workflow.addEdge("processQuery", "searchVectorDatabase");
         workflow.addEdge("searchVectorDatabase", "generateResponse");
         workflow.addEdge("generateResponse", "updateMemory");
         workflow.addEdge("updateMemory", END);
-        
+
         this.graph = workflow.compile();
         console.log("🤖 RAG Chat Agent initialized");
     }
     
     async verifyVectorDatabase() {
         try {
-            const configPath = './vector-db-config.json';
-            if (!fs.existsSync(configPath)) {
-                throw new Error('Vector database config not found. Run Exercise 2 first.');
+            if (this.useChromaClient) {
+                // Try to get collection info from ChromaClient
+                const collections = await this.chromaClient.listCollections();
+                const found = collections.find(c => c.name === this.collectionName);
+                if (!found) throw new Error(`Collection '${this.collectionName}' not found in ChromaDB`);
+                console.log(`✅ Vector database ready (ChromaClient): ${found.count} vectors available`);
+            } else {
+                // Fallback: check vector-db-config.json
+                const configPath = './vector-db-config.json';
+                if (!fs.existsSync(configPath)) throw new Error('vector-db-config.json not found');
+                const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+                if (!config.ready) throw new Error('Vector DB not marked as ready');
+                console.log(`✅ Vector database ready (file): ${config.vectorCount} vectors available`);
             }
-            
-            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-            if (!config.ready) {
-                throw new Error('Vector database not ready. Complete Exercise 2 first.');
-            }
-            
-            console.log(`✅ Vector database ready: ${config.vectorCount} vectors available`);
-            
         } catch (error) {
             console.error("❌ Vector database verification failed:", error.message);
             throw error;
@@ -114,43 +128,40 @@ class RAGChatAgent {
     }
     
     async searchVectorDatabase(state) {
-        // TODO: Implement semantic search against ChromaDB
-        // Hints:
-        // 1. Get collection from ChromaDB
-        // 2. Query with the processed query text
-        // 3. Retrieve top K most similar vectors
-        // 4. Extract content and metadata from results
-        
+        // Try ChromaClient first, fallback to file-based search
         console.log("🔎 Searching vector database...");
-        
         try {
-            // TODO: Query ChromaDB for similar content
-            
-            // For now, create mock search results (replace with actual ChromaDB query)
-            const mockResults = {
-                documents: [[
-                    "Machine learning is a subset of artificial intelligence that enables computers to learn and make decisions from data without being explicitly programmed for every task.",
-                    "JavaScript has become increasingly popular for data science tasks, with libraries like TensorFlow.js enabling machine learning directly in browsers.",
-                    "AWS Bedrock provides access to foundation models through a unified API, making it easier to integrate AI capabilities into applications."
-                ]],
-                metadatas: [[
-                    { title: "Introduction to Machine Learning", url: "https://example.com/ml-intro", qualityScore: 8.5 },
-                    { title: "JavaScript for Data Science", url: "https://example.com/js-datascience", qualityScore: 7.2 },
-                    { title: "AWS Bedrock Guide", url: "https://example.com/bedrock", qualityScore: 9.1 }
-                ]],
-                distances: [[0.2, 0.35, 0.4]]
-            };
-            
+            let results;
+            if (this.useChromaClient) {
+                // Use ChromaClient for semantic search (assume collection exists)
+                const collection = await this.chromaClient.getCollection({ name: this.collectionName });
+                // For demo: use .query() if available, else fallback to mock
+                if (collection && collection.query) {
+                    results = await collection.query({
+                        queryTexts: [state.processedQuery],
+                        nResults: 3
+                    });
+                } else {
+                    throw new Error('ChromaClient collection.query not available');
+                }
+            } else {
+                // Improved semantic fallback: load local vectors + compute cosine similarity to embedded query
+                const ranked = await this.semanticLocalSearch(state.processedQuery, 3);
+                results = {
+                    documents: [ranked.map(r => r.content)],
+                    metadatas: [ranked.map(r => r.metadata)],
+                    // Convert similarity to pseudo-distance (1 - cosine) for consistency
+                    distances: [ranked.map(r => 1 - r.similarity)]
+                };
+            }
             // Process search results
-            if (mockResults.documents[0].length > 0) {
-                state.retrievedContext = mockResults.documents[0].map((doc, index) => ({
-                    content: doc,
-                    metadata: mockResults.metadatas[0][index],
-                    similarity: 1 - mockResults.distances[0][index] // Convert distance to similarity
+            if (results.documents[0].length > 0) {
+                state.retrievedContext = results.documents[0].map((content, i) => ({
+                    content,
+                    metadata: results.metadatas[0][i],
+                    similarity: results.distances[0][i]
                 }));
-                
-                state.metadata.searchResults = state.retrievedContext.length;
-                
+                state.metadata.searchResults = results.documents[0].length;
                 console.log(`✅ Found ${state.retrievedContext.length} relevant documents`);
                 state.retrievedContext.forEach((result, i) => {
                     console.log(`  ${i + 1}. ${result.metadata.title} (similarity: ${result.similarity.toFixed(2)})`);
@@ -158,15 +169,123 @@ class RAGChatAgent {
             } else {
                 console.log("⚠️  No relevant documents found");
                 state.retrievedContext = [];
+                state.metadata.searchResults = 0;
             }
-            
         } catch (error) {
             console.error("❌ Vector search failed:", error.message);
             state.retrievedContext = [];
+            state.metadata.searchResults = 0;
         }
-        
         return state;
     }
+
+    /* ================= Semantic Fallback Helpers ================= */
+    async ensureLocalVectorIndex() {
+        if (this.localVectorIndex) return this.localVectorIndex;
+        // Prefer local exercise-3 copy; fallback to exercise-2 path if needed
+        const candidatePaths = [
+            './chroma_db/tech-content-vectors.json',
+            '../exercise-2-data-engineering/chroma_db/tech-content-vectors.json',
+            '../exercise-2-data-engineering/chroma_db/tech-content-vectors.json'.replace('exercise-3-app-development/', 'exercise-2-data-engineering/')
+        ];
+        let foundPath = null;
+        for (const p of candidatePaths) {
+            if (fs.existsSync(p)) { foundPath = p; break; }
+        }
+        if (!foundPath) throw new Error('Local vector file tech-content-vectors.json not found in expected paths');
+        const raw = JSON.parse(fs.readFileSync(foundPath, 'utf8'));
+        // Support two possible shapes: { embeddings: [{vector, document, metadata}] } OR flat array
+        let records = [];
+        if (Array.isArray(raw)) {
+            records = raw;
+        } else if (raw.embeddings) {
+            records = raw.embeddings.map(e => ({
+                id: e.id,
+                vector: e.vector || e.embedding || [],
+                content: e.document || e.content || '',
+                metadata: e.metadata || {}
+            }));
+        } else if (raw.vectors) {
+            records = raw.vectors;
+        }
+        if (!records.length) throw new Error('No vectors found in local vector file');
+        const dim = records[0].vector.length;
+        // Filter out malformed
+        records = records.filter(r => Array.isArray(r.vector) && r.vector.length === dim);
+        this.localVectorIndex = { vectors: records, dim };
+        console.log(`📄 Loaded ${records.length} local vectors (dim=${dim}) for semantic fallback`);
+        return this.localVectorIndex;
+    }
+
+    async embedQuery(text) {
+        const key = text;
+        if (this.embeddingCache.has(key)) return this.embeddingCache.get(key);
+        // Allow opting out (use keyword fallback) via env var
+        if (process.env.SKIP_EMBEDDING_FALLBACK === '1') {
+            return null;
+        }
+        try {
+            const body = JSON.stringify({ inputText: text });
+            const command = new InvokeModelCommand({
+                modelId: process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2',
+                contentType: 'application/json',
+                accept: 'application/json',
+                body
+            });
+            const response = await bedrockClient.send(command);
+            const payload = JSON.parse(new TextDecoder().decode(response.body));
+            const embedding = payload.embedding || payload.Embeddings || payload.vector;
+            if (!embedding || !Array.isArray(embedding)) throw new Error('No embedding array returned');
+            this.embeddingCache.set(key, embedding);
+            return embedding;
+        } catch (err) {
+            console.warn('⚠️  Bedrock embedding failed, falling back to keyword similarity:', err.message);
+            return null; // Signal to use keyword scoring
+        }
+    }
+
+    cosineSimilarity(a, b) {
+        if (!a || !b || a.length !== b.length) return -1;
+        let dot = 0, na = 0, nb = 0;
+        for (let i = 0; i < a.length; i++) {
+            const x = a[i];
+            const y = b[i];
+            dot += x * y;
+            na += x * x;
+            nb += y * y;
+        }
+        const denom = Math.sqrt(na) * Math.sqrt(nb) + 1e-12;
+        return dot / denom;
+    }
+
+    keywordScore(query, text) {
+        const qTerms = [...new Set(query.split(/\W+/).filter(Boolean))];
+        const lower = text.toLowerCase();
+        let hits = 0;
+        for (const t of qTerms) if (lower.includes(t)) hits++;
+        return hits / (qTerms.length || 1);
+    }
+
+    async semanticLocalSearch(query, k = 3) {
+        const index = await this.ensureLocalVectorIndex();
+        const queryEmbedding = await this.embedQuery(query);
+        let scored;
+        if (queryEmbedding && queryEmbedding.length === index.dim) {
+            scored = index.vectors.map(r => ({
+                ...r,
+                similarity: this.cosineSimilarity(queryEmbedding, r.vector)
+            }));
+        } else {
+            // Fallback to keyword scoring if embedding unavailable
+            scored = index.vectors.map(r => ({
+                ...r,
+                similarity: this.keywordScore(query.toLowerCase(), (r.content || ''))
+            }));
+        }
+        scored.sort((a, b) => b.similarity - a.similarity);
+        return scored.slice(0, k);
+    }
+    /* ============================================================= */
     
     async generateResponse(state) {
         // TODO: Generate response using AWS Bedrock Claude with retrieved context
