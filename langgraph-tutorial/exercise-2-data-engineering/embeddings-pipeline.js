@@ -1,6 +1,6 @@
 const { StateGraph, END, START } = require("@langchain/langgraph");
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
-const { ChromaApi, OpenAIEmbeddingFunction, Configuration } = require("chromadb");
+const { ChromaClient } = require("chromadb");
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 dotenv = require('dotenv');
@@ -13,10 +13,8 @@ const bedrockClient = new BedrockRuntimeClient({
     region: process.env.AWS_REGION || "us-east-1" 
 });
 
-// Initialize ChromaDB client
-const chroma = new ChromaApi(new Configuration({
-    basePath: "http://localhost:8000" // Default ChromaDB port
-}));
+// Initialize ChromaDB client in embedded mode (like SQLite)
+const chroma = new ChromaClient();
 
 // LangGraph state interface for our pipeline
 class PipelineState {
