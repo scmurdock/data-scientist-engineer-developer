@@ -17,6 +17,10 @@ async function initializeAgent() {
     try {
         console.log('🚀 Initializing RAG Chat Agent...');
         chatAgent = new RAGChatAgent();
+        // Wait for async agent initialization if needed
+        if (chatAgent.initializeAgent && chatAgent.initializeAgent.constructor.name === 'AsyncFunction') {
+            await chatAgent.initializeAgent();
+        }
         agentReady = true;
         console.log('✅ Chat Agent ready for requests');
     } catch (error) {
