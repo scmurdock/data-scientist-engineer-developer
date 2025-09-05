@@ -1,7 +1,8 @@
 const { StateGraph, END, START } = require("@langchain/langgraph");
 const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-bedrock-runtime");
-const { ChromaClient, Configuration } = require("chromadb");
+const { ChromaClient } = require("chromadb");
 const fs = require('fs');
+const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 // Initialize clients
@@ -98,7 +99,7 @@ class RAGChatAgent {
                 console.log(`✅ Vector database ready (ChromaClient): ${found.count} vectors available`);
             } else {
                 // Fallback: check vector-db-config.json
-                const configPath = './vector-db-config.json';
+                const configPath = path.join(__dirname, 'vector-db-config.json');
                 if (!fs.existsSync(configPath)) throw new Error('vector-db-config.json not found');
                 const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
                 if (!config.ready) throw new Error('Vector DB not marked as ready');
@@ -113,23 +114,56 @@ class RAGChatAgent {
     async processQuery(state) {
         console.log(`🔍 Processing query: "${state.currentQuery}"`);
         
-        // TODO: Add query preprocessing
-        // Hints:
-        // 1. Clean and normalize the query
-        // 2. Extract key terms for better search
-        // 3. Check conversation history for context
-        // 4. Determine search strategy
+        // Query preprocessing & lightweight enrichment
+        // Steps:
+        // 1. Normalize query (trim, lowercase)
+        // 2. Remove stopwords for a distilled search form
+        // 3. Expand common abbreviations (e.g., ML -> machine learning)
+        // 4. Pull recent conversation turns for implicit context (last 3)
+        // 5. Decide a search strategy hint (keyword vs semantic) based on length / presence of tech terms
         
         try {
-            // Basic query cleaning
-            const cleanQuery = state.currentQuery.trim().toLowerCase();
-            
-            // TODO: Add more sophisticated query processing
-            // - Extract entities (names, technologies, concepts)
-            // - Expand abbreviations (ML -> Machine Learning) 
-            // - Add context from conversation history
-            
-            state.processedQuery = cleanQuery;
+            const raw = state.currentQuery || '';
+            const cleanQuery = raw.trim().toLowerCase();
+
+            const abbreviationMap = {
+                'ml': 'machine learning',
+                'ai': 'artificial intelligence',
+                'llm': 'large language model',
+                'rag': 'retrieval augmented generation'
+            };
+
+            const stopwords = new Set(['the','a','an','and','or','in','on','for','to','is','are','what','how','of','explain','tell','me','about','with']);
+            const tokens = cleanQuery.split(/[^a-z0-9+]+/).filter(Boolean);
+            const expandedTokens = tokens.flatMap(t => abbreviationMap[t] ? abbreviationMap[t].split(' ') : [t]);
+            const keyTerms = expandedTokens.filter(t => !stopwords.has(t) && t.length > 2);
+
+            // Basic entity/tech extraction (heuristic: camelCase / presence of digits / known tech terms)
+            const techLexicon = ['python','javascript','node','aws','bedrock','lambda','vector','embedding','chroma','semantic','similarity','machine','learning','model','dataset'];
+            const entities = [...new Set(keyTerms.filter(t => techLexicon.includes(t)))];
+
+            // Pull short conversation context (recent queries) if available
+            let historyContext = '';
+            if (this.conversationHistory.has(state.conversationId)) {
+                const hist = this.conversationHistory.get(state.conversationId);
+                const recent = hist.slice(-3).map(h => h.query).join(' | ');
+                if (recent) historyContext = recent;
+            }
+
+            // Form processed query (boost entities, unify)
+            const processed = [...keyTerms];
+            // Add entities again to weight them (simple heuristic)
+            entities.forEach(e => processed.push(e));
+            let processedQuery = processed.join(' ').trim();
+
+            // If very short query & we have history context, append hint
+            if (processedQuery.split(' ').length < 3 && historyContext) {
+                processedQuery = processedQuery + ' ' + historyContext;
+            }
+
+            state.processedQuery = processedQuery || cleanQuery || raw;
+            state.metadata.queryTerms = keyTerms.length;
+            state.metadata.entities = entities.length;
             
             console.log(`✅ Query processed: "${state.processedQuery}"`);
             
@@ -196,11 +230,11 @@ class RAGChatAgent {
     /* ================= Semantic Fallback Helpers ================= */
     async ensureLocalVectorIndex() {
         if (this.localVectorIndex) return this.localVectorIndex;
-        // Prefer local exercise-3 copy; fallback to exercise-2 path if needed
+        // Prefer local exercise-3 copy (relative to this file); fallback to exercise-2 path if needed
         const candidatePaths = [
-            './chroma_db/tech-content-vectors.json',
-            '../exercise-2-data-engineering/chroma_db/tech-content-vectors.json',
-            '../exercise-2-data-engineering/chroma_db/tech-content-vectors.json'.replace('exercise-3-app-development/', 'exercise-2-data-engineering/')
+            path.join(__dirname, 'chroma_db', 'tech-content-vectors.json'),
+            path.join(__dirname, '..', 'exercise-2-data-engineering', 'chroma_db', 'tech-content-vectors.json'),
+            path.join(process.cwd(), 'exercise-2-data-engineering', 'chroma_db', 'tech-content-vectors.json')
         ];
         let foundPath = null;
         for (const p of candidatePaths) {
@@ -302,13 +336,6 @@ class RAGChatAgent {
     /* ============================================================= */
     
     async generateResponse(state) {
-        // TODO: Generate response using AWS Bedrock Claude with retrieved context
-        // Hints:
-        // 1. Build prompt with retrieved context
-        // 2. Include conversation history if available
-        // 3. Call Bedrock Claude model
-        // 4. Add source attribution to response
-        
         console.log("🧠 Generating response with Claude...");
         
         const startTime = Date.now();
@@ -321,13 +348,24 @@ class RAGChatAgent {
             
             const prompt = this.buildRAGPrompt(state.currentQuery, contextText, state.conversationId);
             
-            // TODO: Call AWS Bedrock Claude
-            
-            // For now, create mock response (replace with actual Bedrock call)
-            const response = await this.mockBedrockClaude(prompt, state);
+            // Try real Bedrock call; fallback to mock
+            let response;
+            try {
+                if (process.env.USE_MOCK_BEDROCK === '1') {
+                    throw new Error('Mock forced via USE_MOCK_BEDROCK');
+                }
+                response = await this.invokeClaude(prompt, state);
+            } catch (bedrockErr) {
+                console.warn('⚠️  Bedrock generation failed, using mock response:', bedrockErr.message);
+                response = await this.mockBedrockClaude(prompt, state);
+            }
             
             state.response = response;
             state.metadata.responseTime = Date.now() - startTime;
+            // Naive token accounting
+            const promptTokens = prompt.split(/\s+/).length;
+            const respTokens = state.response.split(/\s+/).length;
+            state.metadata.tokensUsed += promptTokens + respTokens;
             
             console.log(`✅ Response generated (${state.metadata.responseTime}ms)`);
             
@@ -340,23 +378,36 @@ class RAGChatAgent {
     }
     
     buildRAGPrompt(query, context, conversationId) {
-        // TODO: Create an effective RAG prompt template
-        return `You are a helpful AI assistant specializing in technology and machine learning topics. 
+        // Build a structured RAG prompt with instructions & safety
+        // Include short conversation history for continuity
+        let historySnippet = '';
+        if (this.conversationHistory.has(conversationId)) {
+            const hist = this.conversationHistory.get(conversationId).slice(-5); // last 5 turns
+            if (hist.length) {
+                historySnippet = hist.map(h => `User: ${h.query}\nAssistant: ${h.response.split('\n')[0]}`)
+                    .join('\n---\n');
+            }
+        }
 
-Use the following context from relevant documents to answer the user's question. If the context doesn't contain relevant information, say so clearly.
+        return `SYSTEM ROLE: You are a concise, accurate AI assistant specializing in software engineering, data, cloud, and machine learning. You strictly use supplied context; if unsure or absent, you say you don't know.
 
-CONTEXT:
-${context}
+CONTEXT DOCUMENTS (Topical excerpts with titles):\n${context || '<<NO RELEVANT CONTEXT FOUND>>'}
+
+RECENT CONVERSATION (for continuity, do not repeat):\n${historySnippet || '<<FIRST TURN OR NO PRIOR CONTEXT RETAINED>>'}
 
 USER QUESTION: ${query}
 
-Please provide a helpful, accurate response based on the context above. Include references to specific sources when possible.
+REQUIREMENTS:
+1. If context supports the answer, cite sources by title in parentheses.
+2. If answer is partially supported, clearly separate supported vs general knowledge.
+3. If context lacks answer, explicitly state that and offer a clarifying follow-up question.
+4. Keep answer under ~200 words unless user asks for more depth.
+5. Never fabricate sources.
 
-RESPONSE:`;
+FINAL ANSWER:`;
     }
     
     async mockBedrockClaude(prompt, state) {
-        // TODO: Replace with actual Bedrock Claude call
         
         // Mock response with source attribution
         if (state.retrievedContext.length > 0) {
@@ -388,15 +439,41 @@ Would you like me to elaborate on any specific aspect?`;
         }
     }
     
+    async invokeClaude(prompt, state) {
+        const modelId = process.env.BEDROCK_CLAUDE_MODEL || 'anthropic.claude-3-haiku-20240307-v1:0';
+        const maxTokens = Number(process.env.CLAUDE_MAX_TOKENS || 512);
+        const body = JSON.stringify({
+            anthropic_version: 'bedrock-2023-05-31',
+            max_tokens: maxTokens,
+            messages: [
+                { role: 'user', content: [ { type: 'text', text: prompt } ] }
+            ]
+        });
+        const command = new InvokeModelCommand({
+            modelId,
+            contentType: 'application/json',
+            accept: 'application/json',
+            body
+        });
+        const response = await bedrockClient.send(command);
+        const json = JSON.parse(new TextDecoder().decode(response.body));
+        // Claude Bedrock messages return content array
+        if (json.content && Array.isArray(json.content)) {
+            const textPart = json.content.find(p => p.type === 'text');
+            if (textPart) return textPart.text.trim();
+        }
+        // Fallback paths
+        return (json.output_text || json.completion || JSON.stringify(json)).trim();
+    }
+
     async updateMemory(state) {
         console.log("💾 Updating conversation memory...");
         
-        // TODO: Implement conversation memory management
-        // Hints:
-        // 1. Store query and response in conversation history
-        // 2. Implement memory limits (max turns, token limits)
-        // 3. Track conversation context for future queries
-        // 4. Update agent metadata
+        // Conversation memory management
+        // 1. Persist turn
+        // 2. Enforce max turns & soft token budget
+        // 3. Track aggregate stats
+        // 4. Provide future context via processQuery / buildRAGPrompt
         
         try {
             // Add to conversation history
@@ -408,7 +485,6 @@ Would you like me to elaborate on any specific aspect?`;
                 sources: state.retrievedContext.map(item => item.metadata.title)
             };
             
-            // TODO: Implement proper memory management
             if (!this.conversationHistory.has(state.conversationId)) {
                 this.conversationHistory.set(state.conversationId, []);
             }
@@ -416,10 +492,20 @@ Would you like me to elaborate on any specific aspect?`;
             const history = this.conversationHistory.get(state.conversationId);
             history.push(conversationTurn);
             
-            // Keep last 10 turns (memory limit)
-            if (history.length > 10) {
-                history.shift();
+            // Limit: keep last 12 turns
+            if (history.length > 12) history.splice(0, history.length - 12);
+
+            // Soft token pruning (approx) if conversation grows (> 4000 tokens approx)
+            const approxTokens = history.reduce((acc, t) => acc + t.query.split(/\s+/).length + t.response.split(/\s+/).length, 0);
+            if (approxTokens > 4000) {
+                // Drop oldest until under threshold * 0.8
+                while (history.length > 1 && history.reduce((acc, t) => acc + t.query.split(/\s+/).length + t.response.split(/\s+/).length, 0) > 3200) {
+                    history.shift();
+                }
             }
+
+            state.metadata.turns = history.length;
+            state.metadata.totalSources = history.reduce((acc, t) => acc + t.contextUsed, 0);
             
             console.log(`✅ Memory updated (${history.length} turns stored)`);
             
@@ -465,27 +551,15 @@ async function main() {
     console.log('Task: Build RAG chat agent with LangGraph\n');
     
     try {
-        // TODO: Uncomment when you've completed the TODO items above
-        // const agent = new RAGChatAgent();
-        // 
-        // // Test the agent
-        // const testQuery = "What is machine learning?";
-        // const result = await agent.chat(testQuery);
-        // 
-        // console.log(`\nQ: ${testQuery}`);
-        // console.log(`A: ${result.response}`);
-        // console.log(`Sources: ${result.sources.map(s => s.title).join(', ')}`);
-        
-        // For now, show the scaffolding structure
-        console.log('📋 TODO LIST:');
-        console.log('1. ✅ Review LangGraph agent architecture');
-        console.log('2. ❌ Complete searchVectorDatabase() function');
-        console.log('3. ❌ Complete generateResponse() with Bedrock');
-        console.log('4. ❌ Complete updateMemory() for conversations');
-        console.log('5. ❌ Test chat functionality');
-        console.log('\n💡 Tip: Make sure ChromaDB is running and Exercise 2 completed');
-        console.log('💡 Test individual methods before the full agent');
-        
+        const agent = new RAGChatAgent();
+        if (agent.initializeAgent && agent.initializeAgent.constructor.name === 'AsyncFunction') {
+            await agent.initializeAgent();
+        }
+        const testQuery = "What is machine learning?";
+        const result = await agent.chat(testQuery);
+        console.log(`\nQ: ${testQuery}`);
+        console.log(`A: ${result.response}`);
+        console.log(`Sources: ${result.sources.map(s => s.title).join(', ') || 'None'}`);
     } catch (error) {
         console.error('❌ Agent initialization failed:', error.message);
         console.log('\n🔧 Troubleshooting:');

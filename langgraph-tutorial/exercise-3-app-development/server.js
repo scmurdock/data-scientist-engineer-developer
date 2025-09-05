@@ -45,13 +45,7 @@ app.get('/health', (req, res) => {
 
 // Main chat endpoint
 app.post('/chat', async (req, res) => {
-    // TODO: Implement chat API endpoint
-    // Hints:
-    // 1. Validate request body (message required)
-    // 2. Extract conversationId from request if provided
-    // 3. Call chatAgent.chat() with the message
-    // 4. Return structured response with metadata
-    
+    // Chat API endpoint implementation
     try {
         if (!agentReady) {
             return res.status(503).json({
@@ -60,8 +54,7 @@ app.post('/chat', async (req, res) => {
             });
         }
         
-        // TODO: Validate request
-        const { message, conversationId } = req.body;
+        const { message, conversationId } = req.body || {};
         
         if (!message || typeof message !== 'string' || message.trim().length === 0) {
             return res.status(400).json({
@@ -72,20 +65,7 @@ app.post('/chat', async (req, res) => {
         
         console.log(`📨 Chat request: "${message.substring(0, 50)}${message.length > 50 ? '...' : ''}"`);
         
-        // TODO: Call chat agent
-        // const result = await chatAgent.chat(message.trim(), conversationId);
-        
-        // For now, return mock response (replace with actual agent call)
-        const result = {
-            response: `I received your message: "${message}". The chat agent is not fully implemented yet. Complete the TODO items in chat-agent.js first.`,
-            conversationId: conversationId || 'mock-conversation-id',
-            metadata: {
-                searchResults: 0,
-                tokensUsed: 0,
-                responseTime: 100
-            },
-            sources: []
-        };
+        const result = await chatAgent.chat(message.trim(), conversationId);
         
         res.json({
             success: true,
@@ -105,7 +85,7 @@ app.post('/chat', async (req, res) => {
 
 // Get conversation history
 app.get('/conversations/:conversationId', async (req, res) => {
-    // TODO: Implement conversation history endpoint
+    // Conversation history endpoint
     try {
         if (!agentReady) {
             return res.status(503).json({
@@ -115,10 +95,14 @@ app.get('/conversations/:conversationId', async (req, res) => {
         
         const { conversationId } = req.params;
         
-        // TODO: Get history from agent
-        // const history = chatAgent.getConversationHistory(conversationId);
-        
-        const history = []; // Mock empty history
+        if (!conversationId) {
+            return res.status(400).json({
+                error: 'Invalid request',
+                message: 'conversationId is required'
+            });
+        }
+
+        const history = chatAgent.getConversationHistory(conversationId);
         
         res.json({
             success: true,
@@ -309,7 +293,7 @@ async function startServer() {
         console.log(`  -H "Content-Type: application/json" \\`);
         console.log(`  -d '{"message":"What is machine learning?"}'`);
         
-        console.log('\n💡 Complete the TODOs in chat-agent.js to enable full functionality');
+    console.log('\n💡 Agent initialized. Use the web UI or POST /chat to converse.');
     });
 }
 

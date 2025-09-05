@@ -3,7 +3,7 @@ const { BedrockRuntimeClient, InvokeModelCommand } = require("@aws-sdk/client-be
 const { ChromaClient } = require("chromadb");
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
-dotenv = require('dotenv');
+const dotenv = require('dotenv');
 dotenv.config();
 
 
