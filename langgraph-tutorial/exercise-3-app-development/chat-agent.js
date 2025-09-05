@@ -33,13 +33,15 @@ class RAGChatAgent {
         this.useChromaClient = false;
         this.graph = null;
         this.conversationHistory = new Map();
+    this.initialized = false; // prevent double init
+    this.initializeAgentPromise = this.initializeAgent();
     // In-memory cache for local vector fallback
     this.localVectorIndex = null; // { vectors: [{id, vector: number[], content, metadata}], dim }
     this.embeddingCache = new Map(); // query -> embedding array
-        this.initializeAgent();
     }
     
     async initializeAgent() {
+    if (this.initialized) return; // idempotent
         // Try to connect to ChromaDB using ChromaClient (embedded mode)
         try {
             this.chromaClient = new ChromaClient({ path: "./chroma_db" });
@@ -55,7 +57,18 @@ class RAGChatAgent {
         await this.verifyVectorDatabase();
 
         // Create LangGraph agent workflow
-        const workflow = new StateGraph(AgentState);
+        // Define explicit state channels for LangGraph
+        const workflow = new StateGraph({
+            channels: {
+                currentQuery: {},
+                processedQuery: {},
+                retrievedContext: {},
+                response: {},
+                conversationId: {},
+                metadata: {},
+                messages: {} // reserved for future memory features
+            }
+        });
 
         // Define agent nodes
         workflow.addNode("processQuery", this.processQuery.bind(this));
@@ -72,6 +85,7 @@ class RAGChatAgent {
 
         this.graph = workflow.compile();
         console.log("🤖 RAG Chat Agent initialized");
+    this.initialized = true;
     }
     
     async verifyVectorDatabase() {
