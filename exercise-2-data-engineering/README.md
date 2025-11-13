@@ -1,7 +1,7 @@
 # Exercise 2: Data Engineering - Embeddings Pipeline
 
 **Role:** Data Engineer  
-**Time:** 60 minutes  
+**Time:** 30 minutes  
 **Goal:** Transform analyzed content into searchable embeddings using LangGraph and AWS Bedrock
 
 ## 🎯 Learning Objectives
@@ -17,25 +17,25 @@ Take the analyzed content from Exercise 1 and build a production-ready embedding
 
 ## 🛠️ TODO List (Complete in Order)
 
-### Step 1: LangGraph Pipeline Setup (15 min)
+### Step 1: LangGraph Pipeline Setup (7.5 min)
 - [ ] Review the LangGraph state management
 - [ ] Complete the `processContent` node
 - [ ] Add error handling for failed processing
 - [ ] Test pipeline with sample data
 
-### Step 2: AWS Bedrock Integration (20 min)  
+### Step 2: AWS Bedrock Integration (10 min)  
 - [ ] Complete the `generateEmbeddings` node
 - [ ] Configure Bedrock Titan embeddings model
 - [ ] Handle API rate limiting and retries
 - [ ] Test embedding generation
 
-### Step 3: Vector Storage (15 min)
+### Step 3: Vector Storage (7.5 min)
 - [ ] Complete the `storeVectors` node
 - [ ] Set up ChromaDB collection with metadata
 - [ ] Implement batch insertion for efficiency
 - [ ] Add data validation
 
-### Step 4: Pipeline Orchestration (10 min)
+### Step 4: Pipeline Orchestration (5 min)
 - [ ] Complete the LangGraph workflow definition
 - [ ] Add monitoring and logging
 - [ ] Test end-to-end pipeline
