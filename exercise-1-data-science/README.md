@@ -1,7 +1,7 @@
 # Exercise 1: Data Science - Web Data Exploration
 
 **Role:** Data Scientist  
-**Time:** 45 minutes  
+**Time:** 22.5 minutes  
 **Goal:** Analyze web content to understand patterns and prepare data for the pipeline
 
 ## 🎯 Learning Objectives
@@ -17,19 +17,19 @@ You're analyzing technology blog posts to understand trending topics. Your analy
 
 ## 🛠️ TODO List (Complete in Order)
 
-### Step 1: Basic Data Collection (10 min)
+### Step 1: Basic Data Collection (5 min)
 - [ ] Run the starter code to see the scaffolding
 - [ ] Complete the `fetchWebContent()` function
 - [ ] Add error handling for failed requests
 - [ ] Test with 3-5 tech blog URLs
 
-### Step 2: Data Analysis (20 min)  
+### Step 2: Data Analysis (10 min)  
 - [ ] Complete the `analyzeTextContent()` function
 - [ ] Implement word frequency analysis
 - [ ] Calculate readability metrics
 - [ ] Generate content statistics
 
-### Step 3: Data Insights (15 min)
+### Step 3: Data Insights (7.5 min)
 - [ ] Complete the `generateInsights()` function
 - [ ] Identify trending topics
 - [ ] Create data quality report

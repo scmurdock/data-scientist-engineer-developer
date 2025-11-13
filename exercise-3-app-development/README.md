@@ -1,7 +1,7 @@
 # Exercise 3: Application Development - RAG Chat Agent
 
 **Role:** Application Developer  
-**Time:** 45 minutes  
+**Time:** 22.5 minutes  
 **Goal:** Build a chat agent that leverages the vector database using LangGraph and AWS Bedrock
 
 ## 🎯 Learning Objectives
@@ -17,19 +17,19 @@ Create a chat agent that can answer questions about the tech content by searchin
 
 ## 🛠️ TODO List (Complete in Order)
 
-### Step 1: Agent Architecture Setup (15 min)
+### Step 1: Agent Architecture Setup (7.5 min)
 - [ ] Review the LangGraph agent structure
 - [ ] Complete the semantic search tool
 - [ ] Add conversation memory management
 - [ ] Test basic agent responses
 
-### Step 2: RAG Implementation (20 min)  
+### Step 2: RAG Implementation (10 min)  
 - [ ] Complete the `searchVectorDatabase` function
 - [ ] Implement context retrieval and ranking
 - [ ] Complete the `generateResponse` node
 - [ ] Add source attribution to responses
 
-### Step 3: Chat Interface (10 min)
+### Step 3: Chat Interface (5 min)
 - [ ] Complete the Express.js API endpoints
 - [ ] Add conversation history tracking
 - [ ] Test the chat functionality
