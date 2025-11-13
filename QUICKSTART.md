@@ -6,6 +6,7 @@ npm install
 # Copy environment template
 cp .env.example .env
 # Edit .env with your AWS credentials
+Provided by your instructor if you don't have AWS access
 
 # Run exercises in order:
 npm run ex1  # Data Science - Web Analysis
