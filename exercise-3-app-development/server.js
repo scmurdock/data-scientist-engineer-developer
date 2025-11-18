@@ -245,7 +245,7 @@ app.get('/', (req, res) => {
                 
             } catch (error) {
                 document.getElementById(typingId).remove();
-                addMessageToChat('Assistant', 'Sorry, I\'m having trouble connecting to the server. Please make sure the agent is properly configured.', 'agent-message');
+                addMessageToChat('Assistant', "Sorry, I'm having trouble connecting to the server. Please make sure the agent is properly configured.", 'agent-message');
             }
         }
         
