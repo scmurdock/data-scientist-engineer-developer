@@ -275,7 +275,7 @@ class RAGChatAgent {
         try {
             const body = JSON.stringify({ inputText: text });
             const command = new InvokeModelCommand({
-                modelId: process.env.BEDROCK_EMBED_MODEL || 'amazon.titan-embed-text-v2',
+                modelId: process.env.BEDROCK_EMBEDDINGS_MODEL_ID || 'amazon.titan-embed-text-v2',
                 contentType: 'application/json',
                 accept: 'application/json',
                 body
@@ -440,7 +440,7 @@ Would you like me to elaborate on any specific aspect?`;
     }
     
     async invokeClaude(prompt, state) {
-        const modelId = process.env.BEDROCK_CLAUDE_MODEL || 'anthropic.claude-3-haiku-20240307-v1:0';
+        const modelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-haiku-20240307-v1:0';
         const maxTokens = Number(process.env.CLAUDE_MAX_TOKENS || 512);
         const body = JSON.stringify({
             anthropic_version: 'bedrock-2023-05-31',

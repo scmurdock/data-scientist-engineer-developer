@@ -7,9 +7,6 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 
-dotenv = require('dotenv');
-dotenv.config();
-
 // Initialize AWS Bedrock client
 const bedrockClient = new BedrockRuntimeClient({ 
     region: process.env.AWS_REGION || process.env.BEDROCK_AWS_REGION || "us-east-1"
@@ -92,7 +89,7 @@ class EmbeddingsPipeline {
         console.log("📂 Loading data from Data Science analysis...");
         
         try {
-            const dataPath = './data-science-output.json';
+            const dataPath = './exercise-2-data-engineering/data-science-output.json';
             if (!fs.existsSync(dataPath)) {
                 throw new Error('Data Science output not found. Run Exercise 1 first.');
             }
@@ -417,7 +414,7 @@ class EmbeddingsPipeline {
         };
         
         // Export for Exercise 3
-        fs.writeFileSync('../exercise-3-app-development/vector-db-config.json', 
+        fs.writeFileSync('./exercise-3-app-development/vector-db-config.json', 
             JSON.stringify({
                 collection: this.collectionName,
                 vectorCount: state.storedVectors.length,

@@ -1,5 +1,7 @@
 const express = require('express');
 const { RAGChatAgent } = require('./chat-agent');
+const dotenv = require('dotenv');
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -229,7 +231,7 @@ app.get('/', (req, res) => {
                 
             } catch (error) {
                 document.getElementById(typingId).remove();
-                addMessageToChat('Assistant', 'Sorry, I\'m having trouble connecting to the server. Please make sure the agent is properly configured.', 'agent-message');
+                addMessageToChat('Assistant', 'Sorry, Im having trouble connecting to the server. Please make sure the agent is properly configured.', 'agent-message');
             }
         }
         
