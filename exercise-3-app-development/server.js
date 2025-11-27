@@ -220,8 +220,10 @@ app.get('/', (req, res) => {
                     
                     let responseText = data.data.response;
                     if (data.data.sources && data.data.sources.length > 0) {
-                        const sourcesList = data.data.sources.map(s => s.title).join(', ');
-                        responseText += \`<div class="sources"><strong>Sources:</strong> \${sourcesList}</div>\`;
+                        const primarySource = data.data.sources[0].title;
+                        responseText += \`<div class="sources"><strong>Source:</strong> \${primarySource}</div>\`;
+                    } else {
+                        responseText += \`<div class="sources"><strong>Source:</strong> No Source Found</div>\`;
                     }
                     
                     addMessageToChat('Assistant', responseText, 'agent-message');
