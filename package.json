@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "ex1": "cd exercise-1-data-science && node starter-code.js",
-    "ex2": "cd exercise-2-data-engineering && node embeddings-pipeline.js", 
-    "ex3": "cd exercise-3-app-development && node server.js"
+    "ex1": "node ./exercise-1-data-science/starter-code.js",
+    "ex2": "node ./exercise-2-data-engineering/embeddings-pipeline.js", 
+    "ex3": "node ./exercise-3-app-development/server.js"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock-runtime": "^3.400.0",

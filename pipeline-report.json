@@ -1,8 +1,8 @@
 {
   "pipelineRun": {
-    "timestamp": "2025-11-27T13:40:35.593Z",
+    "timestamp": "2025-11-28T10:41:21.321Z",
     "status": "SUCCESS",
-    "duration": "3 seconds"
+    "duration": "2 seconds"
   },
   "metrics": {
     "processed": 3,
