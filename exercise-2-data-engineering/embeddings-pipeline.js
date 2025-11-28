@@ -417,7 +417,7 @@ class EmbeddingsPipeline {
         };
         
         // Export for Exercise 3
-        fs.writeFileSync('../exercise-3-app-development/vector-db-config.json', 
+        fs.writeFileSync('./exercise-3-app-development/vector-db-config.json', 
             JSON.stringify({
                 collection: this.collectionName,
                 vectorCount: state.storedVectors.length,

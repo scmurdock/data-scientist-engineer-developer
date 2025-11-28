@@ -1,0 +1,49 @@
+{
+  "pipelineRun": {
+    "timestamp": "2025-11-28T11:01:23.664Z",
+    "status": "PARTIAL_SUCCESS",
+    "duration": "0 seconds"
+  },
+  "metrics": {
+    "processed": 0,
+    "embedded": 0,
+    "stored": 0,
+    "failed": 0
+  },
+  "dataQuality": {
+    "inputArticles": 0,
+    "processedChunks": 0,
+    "successfulEmbeddings": 0,
+    "storedVectors": 0,
+    "errorRate": 4
+  },
+  "vectorDatabase": {
+    "collection": "tech-content-vectors",
+    "totalVectors": 0,
+    "dimensions": 1536,
+    "ready": false
+  },
+  "errors": [
+    {
+      "stage": "loadData",
+      "error": "Data Science output not found. Run Exercise 1 first."
+    },
+    {
+      "stage": "processContent",
+      "error": "No content data available"
+    },
+    {
+      "stage": "generateEmbeddings",
+      "error": "No processed content available"
+    },
+    {
+      "stage": "storeVectors",
+      "error": "No embeddings to store"
+    }
+  ],
+  "nextSteps": [
+    "Vector database ready for semantic search",
+    "Proceed to Exercise 3 for chat agent development",
+    "Connection details exported to exercise-3-app-development"
+  ]
+}
